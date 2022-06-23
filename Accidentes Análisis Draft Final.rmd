@@ -116,6 +116,119 @@ fig
 ```
 The figure shows that there is a general decrease in accidents. In particular, type 11 accidents decreased by 37.86%. The decrease is due to the decrease in mobility due to the pandemic. However, it is necessary to emphasize that the indicators remained the same. In other words, accidents are still as serious, but occurred in lesser numbers. 
 
+#### Bicycle accidents
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+accidentes_bicicleta <- accidentes %>% select(Cve_Segmen,ANIO,Cyclist,longitud,I_BANQ_VAL,I_ARBOL_VA,I_RAMP_VAL,I_ALUM_VAL,I_SENA_VA,A_DENS_VAL,A_ESCU_VAL,A_COME_VAL,A_DEHA_VAL,T_CEPO_VAL,T_JERA_VAL,T_TRPU_VAL,T_BRT_VAL,T_METR_VAL) %>%
+    group_by(Cve_Segmen,ANIO,Cyclist) %>%
+    mutate(Counts = n()) %>% 
+    group_by(Cve_Segmen,ANIO) %>% 
+    mutate(I_BANQ = mean(I_BANQ_VAL),
+        I_ARBOL = mean(I_ARBOL_VA),
+        I_RAMP = mean(I_RAMP_VAL),
+        I_ALUM = mean(I_ALUM_VAL),
+        I_SENA = mean(I_SENA_VA),
+        A_DENS = mean(A_DENS_VAL),
+        A_ESCU = mean(A_ESCU_VAL),
+        A_COME = mean(A_COME_VAL),
+        A_DEHA = mean(A_DEHA_VAL),
+        T_CEPO = mean(T_CEPO_VAL),
+        T_JERA = mean(T_JERA_VAL),
+        T_TRPU = mean(T_TRPU_VAL),
+        T_BRT = mean(T_BRT_VAL),
+        T_METR = mean(T_METR_VAL)) %>% 
+    ungroup() %>% 
+    select(-c(I_BANQ_VAL,I_ARBOL_VA,I_RAMP_VAL,I_ALUM_VAL,I_SENA_VA,A_DENS_VAL,A_ESCU_VAL,A_COME_VAL,A_DEHA_VAL,T_CEPO_VAL,T_JERA_VAL,T_TRPU_VAL,T_BRT_VAL,T_METR_VAL)) %>% 
+    distinct() %>%
+    spread(key=Cyclist, value = Counts, fill = 0)
+
+accidentes_bicicleta <- accidentes_bicicleta %>% mutate('Rate of involved cyclists' = Involved/(Involved+`Not involved`))
+accidentes_bicicleta <- accidentes_bicicleta %>% mutate('Invol' = if_else(Involved > 0, 1, 0))
+
+pl_colorscale = list(c(0.0, '#119dff'),
+                  c(0.5, '#119dff'),
+                  c(0.5, '#ef553b'),
+                  c(1, '#ef553b'))
+
+axis = list(showline=FALSE,
+            zeroline=FALSE,
+            gridcolor='#ffff',
+            ticklen=4,
+            titlefont=list(size=13))
+
+fig <- accidentes_bicicleta %>% filter(ANIO == 2020) %>% plot_ly()
+fig <- fig %>%
+  add_trace(
+    type = 'splom',
+    dimensions = list(
+      list(label='Sidewalk', values=~I_BANQ),
+      list(label='Tree', values=~I_ARBOL),
+      list(label='Slope', values=~I_RAMP),
+      list(label='Street lighting', values=~I_ALUM),
+      list(label='Traffic sign', values=~I_SENA),
+      list(label='Dens', values=~A_DENS),
+      list(label='Schools', values=~A_ESCU),
+      list(label='Stores', values=~A_COME),
+      list(label='Deha', values=~A_DEHA),
+      list(label='Cepo', values=~T_CEPO),
+      list(label='Jera', values=~T_JERA),
+      list(label='Trpu', values=~T_TRPU),
+      list(label='Brt', values=~T_BRT),
+      list(label='Metr', values=~T_METR)
+    ),
+
+    text=~factor(Invol, labels=c("Not involved","Cyclist involved")),
+    diagonal=list(visible=FALSE),
+    marker = list(
+      color = ~Invol,
+      colorscale = pl_colorscale,
+      size = 5,
+      line = list(
+        width = 1,
+        color = 'rgb(230,230,230)'
+      )
+    )
+  ) 
+
+fig <- fig %>% layout(
+    title = "Scatterplot Matrix (SPLOM) for Diabetes Dataset<br>Data source: <a href='https://www.kaggle.com/uciml/pima-indians-diabetes-database/data'>[1]</a>",
+    hovermode='closest',
+    dragmode = 'select',
+    plot_bgcolor='rgba(240,240,240, 0.95)',
+    xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4, titlefont=list(size=13)),
+    yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4, titlefont=list(size=13)),
+    xaxis2=axis,
+    xaxis3=axis,
+    xaxis4=axis,
+    xaxis5=axis,
+    xaxis6=axis,
+    xaxis7=axis,
+    xaxis8=axis,
+    xaxis9=axis,
+    xaxis10=axis,
+    xaxis11=axis,
+    xaxis12=axis,
+    xaxis13=axis,
+    xaxis14=axis,
+    yaxis2=axis,
+    yaxis3=axis,
+    yaxis4=axis,
+    yaxis5=axis,
+    yaxis6=axis,
+    yaxis7=axis,
+    yaxis8=axis,
+    yaxis9=axis,
+    yaxis10=axis,
+    yaxis11=axis,
+    yaxis12=axis,
+    yaxis13=axis,
+    yaxis14=axis
+  )
+
+summary(accidentes_bicicleta %>% filter(T_JERA==18, ANIO==2020) %>% select(Involved))
+fig
+```
+There is no appreciable feature that favors accidents involving cyclists. In some cases, graphically it can be seen that there is; however, the numerical summaries of the data indicate that it is only due to the low diversity of observations in this variable.
 
 
 
