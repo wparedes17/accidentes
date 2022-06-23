@@ -1,0 +1,122 @@
+# Accidentes y PSAT scores
+## R notebook for reproducibility
+### Wilfrido J. Paredes
+
+A sample of the data
+```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+library(readxl)
+library(tidyr)
+library(dplyr)
+library(plotly)
+
+accidentes <- read_excel('accidentes.xlsx')
+head(accidentes)
+```
+We convert some numerical variables to categorical in order to work in proper way. For example, the type of the accident.
+Also, we defined new variables:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+accidentes <- accidentes %>% mutate('Magnitude' = AUTOMOVIL+CAMPASAJ+MICROBUS+PASCAMION+OMNIBUS+TRANVIA+CAMIONETA+CAMION+TRACTOR+FERROCARRI+MOTOCICLET+BICICLETA+OTROVEHIC)
+accidentes <- accidentes %>% mutate('Severity' = CONDMUERTO+PASAMUERTO+PEATMUERTO+CICLMUERTO+OTROMUERTO+0.5*(CONDHERIDO+PASAHERIDO+PEATHERIDO+CICLHERIDO+OTROHERIDO))
+accidentes <- accidentes %>% mutate('Deaths' = CONDMUERTO+PASAMUERTO+PEATMUERTO+CICLMUERTO+OTROMUERTO)
+accidentes <- accidentes %>% mutate('Injured' = CONDHERIDO+PASAHERIDO+PEATHERIDO+CICLHERIDO+OTROHERIDO)
+accidentes <- accidentes %>% mutate('Rate DI' = if_else(Injured > 0, if_else(Deaths > 0, Deaths/Injured,0),if_else(Deaths > 0, 10, 0)))
+accidentes <- accidentes %>% mutate('Pedestrian' = if_else(PEATMUERTO+PEATHERIDO > 0, 'Involved', 'Not involved'))
+accidentes <- accidentes %>% mutate('Cyclist' = if_else(CICLMUERTO+CICLHERIDO+BICICLETA > 0, 'Involved', 'Not involved'))
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+accidentes$TIPACCID <- as.factor(accidentes$TIPACCID)
+```
+
+#### Accident indicators 2019 vs 2020
+```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+accidentes_dummy <- accidentes %>% group_by(ANIO) %>% summarise(
+    'Magnitude Median' = median(Magnitude),
+    'Severity Median' = median(Severity),
+    'Deaths Median' = median(`Rate DI`),
+    'Rate of pedestrians involved' = sum(Pedestrian=='Involved')/n()*100,
+    'Rate of cyclists involved' = sum(Cyclist=='Involved')/n()*100
+)
+
+print(accidentes_dummy)
+m2019 <- accidentes %>% filter(ANIO==2019) %>% pull(Magnitude)
+m2020 <- accidentes %>% filter(ANIO==2020) %>% pull(Magnitude)
+
+figm <- plot_ly(alpha = 0.6)
+figm <- figm %>% add_histogram(x = ~m2019)
+figm <- figm %>% add_histogram(x = ~m2020)
+figm <- figm %>% layout(barmode = "overlay")
+
+s2019 <- accidentes %>% filter(ANIO==2019) %>% pull(Severity)
+s2020 <- accidentes %>% filter(ANIO==2020) %>% pull(Severity)
+
+figs <- plot_ly(alpha = 0.6)
+figs <- figs %>% add_histogram(x = ~s2019)
+figs <- figs %>% add_histogram(x = ~s2020)
+figs <- figs %>% layout(barmode = "overlay")
+
+fig <- subplot(figm, figs)
+fig
+```
+
+In general, there is no change in accident dynamics. Accidents generally involve the same magnitude, severity, pedestrian injuries, cyclists involved in both years. This means that the pandemic did not affect this.
+
+#### Type of the accidents 2019 vs 2020
+```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+accidentes_por_calle <- accidentes %>% select(Cve_Segmen,ANIO,TIPACCID) %>%
+    group_by(Cve_Segmen,ANIO,TIPACCID) %>%
+    mutate(Counts = n()) %>% ungroup() %>% distinct() %>%
+    spread(key=TIPACCID, value = Counts, fill = 0) %>% 
+    select(Cve_Segmen,ANIO,`1`,`2`,`3`,`4`,`5`,`6`,`7`,`8`,`9`,`10`,`11`,`12`) %>%
+    distinct()
+
+accidentes2019 <- log(colSums(accidentes_por_calle %>% filter(ANIO == 2019) %>% select(-Cve_Segmen,-ANIO)))
+accidentes2020 <- log(colSums(accidentes_por_calle %>% filter(ANIO == 2020) %>% select(-Cve_Segmen,-ANIO)))
+accidentes2020[9] <- 0
+
+aux <- data.frame(accidentes2019,accidentes2020)
+tipo_accidentes <- as.data.frame(t(aux))
+
+fig <- plot_ly(tipo_accidentes, x=c(2019,2020), y = ~`1`, name='1', type='scatter', mode='lines')
+fig <- fig %>% add_trace( y = ~`2`, name='2')
+fig <- fig %>% add_trace( y = ~`3`, name='3')
+fig <- fig %>% add_trace( y = ~`4`, name='4')
+fig <- fig %>% add_trace( y = ~`5`, name='5')
+fig <- fig %>% add_trace( y = ~`6`, name='6')
+fig <- fig %>% add_trace( y = ~`7`, name='7')
+fig <- fig %>% add_trace( y = ~`8`, name='8')
+fig <- fig %>% add_trace( y = ~`9`, name='9')
+fig <- fig %>% add_trace( y = ~`10`, name='10')
+fig <- fig %>% add_trace( y = ~`11`, name='11')
+fig <- fig %>% add_trace( y = ~`12`, name='12')
+
+fig <- fig %>% layout(
+    xaxis = list(range = c(2017,2022), tickvals = list(2019,2020), tickmode = "array"),
+    yaxis = list(showgrid=FALSE, range = c(0,9), tickvals = list(2019,2020), tickmode = "array", title='Number of cases'))
+
+fig <- fig %>% add_annotations(x = rep(2020+0.1,12),
+                  y = accidentes2020,
+                  text = as.character(round(exp(accidentes2020),0)),
+                  xref = "x",
+                  yref = "y",
+                  showarrow = FALSE,
+                  ax = 20,
+                  ay = -40)
+
+fig <- fig %>% add_annotations(x = rep(2019-0.1,12),
+                  y = accidentes2019,
+                  text = as.character(round(exp(accidentes2019),0)),
+                  xref = "x",
+                  yref = "y",
+                  showarrow = FALSE,
+                  ax = 20,
+                  ay = -40)
+fig
+```
+The figure shows that there is a general decrease in accidents. In particular, type 11 accidents decreased by 37.86%. The decrease is due to the decrease in mobility due to the pandemic. However, it is necessary to emphasize that the indicators remained the same. In other words, accidents are still as serious, but occurred in lesser numbers. 
+
+
+
+
+
