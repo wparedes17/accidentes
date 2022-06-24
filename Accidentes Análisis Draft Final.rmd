@@ -191,7 +191,7 @@ fig <- fig %>%
   ) 
 
 fig <- fig %>% layout(
-    title = "Scatterplot Matrix (SPLOM) for Diabetes Dataset<br>Data source: <a href='https://www.kaggle.com/uciml/pima-indians-diabetes-database/data'>[1]</a>",
+    title = "Scatterplot Matrix (SPLOM) for biclycle accidents",
     hovermode='closest',
     dragmode = 'select',
     plot_bgcolor='rgba(240,240,240, 0.95)',
