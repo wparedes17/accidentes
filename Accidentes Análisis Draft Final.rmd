@@ -144,6 +144,22 @@ accidentes_bicicleta <- accidentes %>% select(Cve_Segmen,ANIO,Cyclist,longitud,I
 
 accidentes_bicicleta <- accidentes_bicicleta %>% mutate('Rate of involved cyclists' = Involved/(Involved+`Not involved`))
 accidentes_bicicleta <- accidentes_bicicleta %>% mutate('Invol' = if_else(Involved > 0, 1, 0))
+```
+
+```{r, echo=FALSE}
+ss <- accidentes_bicicleta$ANIO == 2019
+model_bici <- glm(formula = Involved ~ I_BANQ+T_JERA, data = accidentes_bicicleta, subset = ss, family = poisson)
+summary(model_bici)
+```
+There is no appreciable feature that favors accidents involving cyclists. In some cases, graphically it can be seen that there is; however, the numerical summaries of the data indicate that it is only due to the low diversity of observations in this variable.
+
+
+
+
+```{r, echo=FALSE}
+accidentes_bicicleta_year <- accidentes_bicicleta %>% filter(ANIO == 2019)
+cutpoint <- quantile(accidentes_bicicleta_year$`Rate of involved cyclists`, 0.95)
+accidentes_bicicleta_year %>% filter(`Rate of involved cyclists` > cutpoint)
 
 pl_colorscale = list(c(0.0, '#119dff'),
                   c(0.5, '#119dff'),
@@ -156,7 +172,7 @@ axis = list(showline=FALSE,
             ticklen=4,
             titlefont=list(size=13))
 
-fig <- accidentes_bicicleta %>% filter(ANIO == 2020) %>% plot_ly()
+fig <- accidentes_bicicleta_year %>% plot_ly()
 fig <- fig %>%
   add_trace(
     type = 'splom',
@@ -174,7 +190,8 @@ fig <- fig %>%
       list(label='Jera', values=~T_JERA),
       list(label='Trpu', values=~T_TRPU),
       list(label='Brt', values=~T_BRT),
-      list(label='Metr', values=~T_METR)
+      list(label='Metr', values=~T_METR),
+      list(label='Rate', values=~`Rate of involved cyclists`)
     ),
 
     text=~factor(Invol, labels=c("Not involved","Cyclist involved")),
@@ -210,6 +227,7 @@ fig <- fig %>% layout(
     xaxis12=axis,
     xaxis13=axis,
     xaxis14=axis,
+    xaxis15=axis,
     yaxis2=axis,
     yaxis3=axis,
     yaxis4=axis,
@@ -222,14 +240,16 @@ fig <- fig %>% layout(
     yaxis11=axis,
     yaxis12=axis,
     yaxis13=axis,
-    yaxis14=axis
+    yaxis14=axis,
+    yaxis15=axis,
   )
 
-summary(accidentes_bicicleta %>% filter(T_JERA==18, ANIO==2020) %>% select(Involved))
+summary(accidentes_bicicleta %>% filter(T_JERA==18, ANIO==2019) %>% select(Involved))
 fig
+
 ```
-There is no appreciable feature that favors accidents involving cyclists. In some cases, graphically it can be seen that there is; however, the numerical summaries of the data indicate that it is only due to the low diversity of observations in this variable.
 
-
-
-
+```{r, echo=FALSE}
+head(accidentes_bicicleta_year)
+cor(accidentes_bicicleta_year %>% select(-c(Cve_Segmen,ANIO,Involved,`Not involved`,Invol)))
+```
