@@ -19,7 +19,9 @@ Also, we defined new variables:
 accidentes <- accidentes %>% mutate('Magnitude' = AUTOMOVIL+CAMPASAJ+MICROBUS+PASCAMION+OMNIBUS+TRANVIA+CAMIONETA+CAMION+TRACTOR+FERROCARRI+MOTOCICLET+BICICLETA+OTROVEHIC)
 accidentes <- accidentes %>% mutate('Severity' = CONDMUERTO+PASAMUERTO+PEATMUERTO+CICLMUERTO+OTROMUERTO+0.5*(CONDHERIDO+PASAHERIDO+PEATHERIDO+CICLHERIDO+OTROHERIDO))
 accidentes <- accidentes %>% mutate('Deaths' = CONDMUERTO+PASAMUERTO+PEATMUERTO+CICLMUERTO+OTROMUERTO)
+accidentes <- accidentes %>% mutate("Is_Deaths" = if_else(Deaths > 0, "Involved", "Not involved"))
 accidentes <- accidentes %>% mutate('Injured' = CONDHERIDO+PASAHERIDO+PEATHERIDO+CICLHERIDO+OTROHERIDO)
+accidentes <- accidentes %>% mutate("Is_Injured" = if_else(Injured > 0, "Involved", "Not involved"))
 accidentes <- accidentes %>% mutate('Rate DI' = if_else(Injured > 0, if_else(Deaths > 0, Deaths/Injured,0),if_else(Deaths > 0, 10, 0)))
 accidentes <- accidentes %>% mutate('Pedestrian' = if_else(PEATMUERTO+PEATHERIDO > 0, 'Involved', 'Not involved'))
 accidentes <- accidentes %>% mutate('Cyclist' = if_else(CICLMUERTO+CICLHERIDO+BICICLETA > 0, 'Involved', 'Not involved'))
@@ -117,7 +119,6 @@ fig
 The figure shows that there is a general decrease in accidents. In particular, type 11 accidents decreased by 37.86%. The decrease is due to the decrease in mobility due to the pandemic. However, it is necessary to emphasize that the indicators remained the same. In other words, accidents are still as serious, but occurred in lesser numbers. 
 
 #### Bicycle accidents
-
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
 accidentes_bicicleta <- accidentes %>% select(Cve_Segmen,ANIO,Cyclist,longitud,I_BANQ_VAL,I_ARBOL_VA,I_RAMP_VAL,I_ALUM_VAL,I_SENA_VA,A_DENS_VAL,A_ESCU_VAL,A_COME_VAL,A_DEHA_VAL,T_CEPO_VAL,T_JERA_VAL,T_TRPU_VAL,T_BRT_VAL,T_METR_VAL) %>%
     group_by(Cve_Segmen,ANIO,Cyclist) %>%
@@ -154,6 +155,84 @@ summary(model_bici)
 There is no appreciable feature that favors accidents involving cyclists. In some cases, graphically it can be seen that there is; however, the numerical summaries of the data indicate that it is only due to the low diversity of observations in this variable.
 
 
+#### Injured accidents
+```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+accidentes_injured <- accidentes %>% select(Cve_Segmen,ANIO,Is_Injured,longitud,I_BANQ_VAL,I_ARBOL_VA,I_RAMP_VAL,I_ALUM_VAL,I_SENA_VA,A_DENS_VAL,A_ESCU_VAL,A_COME_VAL,A_DEHA_VAL,T_CEPO_VAL,T_JERA_VAL,T_TRPU_VAL,T_BRT_VAL,T_METR_VAL) %>%
+    group_by(Cve_Segmen,ANIO,Is_Injured) %>%
+    mutate(Counts = n()) %>% 
+    group_by(Cve_Segmen,ANIO) %>% 
+    mutate(I_BANQ = mean(I_BANQ_VAL),
+        I_ARBOL = mean(I_ARBOL_VA),
+        I_RAMP = mean(I_RAMP_VAL),
+        I_ALUM = mean(I_ALUM_VAL),
+        I_SENA = mean(I_SENA_VA),
+        A_DENS = mean(A_DENS_VAL),
+        A_ESCU = mean(A_ESCU_VAL),
+        A_COME = mean(A_COME_VAL),
+        A_DEHA = mean(A_DEHA_VAL),
+        T_CEPO = mean(T_CEPO_VAL),
+        T_JERA = mean(T_JERA_VAL),
+        T_TRPU = mean(T_TRPU_VAL),
+        T_BRT = mean(T_BRT_VAL),
+        T_METR = mean(T_METR_VAL)) %>% 
+    ungroup() %>% 
+    select(-c(I_BANQ_VAL,I_ARBOL_VA,I_RAMP_VAL,I_ALUM_VAL,I_SENA_VA,A_DENS_VAL,A_ESCU_VAL,A_COME_VAL,A_DEHA_VAL,T_CEPO_VAL,T_JERA_VAL,T_TRPU_VAL,T_BRT_VAL,T_METR_VAL)) %>% 
+    distinct() %>%
+    spread(key=Is_Injured, value = Counts, fill = 0)
+
+accidentes_injured <- accidentes_injured %>% mutate('Rate of injured' = Involved/(Involved+`Not involved`))
+accidentes_injured <- accidentes_injured %>% mutate('Invol' = if_else(Involved > 0, 1, 0))
+```
+
+```{r, echo=FALSE}
+ss <- accidentes_injured$ANIO == 2019
+model_injured <- glm(formula = Involved ~ I_BANQ+I_ARBOL+I_RAMP+I_ALUM+I_SENA+A_DENS+A_ESCU+A_COME+A_DEHA+T_CEPO+T_JERA+T_TRPU, data = accidentes_injured, subset = ss, family = poisson)
+summary(model_injured)
+
+model_injured <- glm(formula = Involved ~ I_BANQ+I_RAMP+T_CEPO+T_JERA+T_TRPU, data = accidentes_injured, subset = ss, family = poisson)
+summary(model_injured)
+
+```
+
+
+#### Injured accidents
+```{r, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+accidentes_death <- accidentes %>% select(Cve_Segmen,ANIO,Is_Deaths,longitud,I_BANQ_VAL,I_ARBOL_VA,I_RAMP_VAL,I_ALUM_VAL,I_SENA_VA,A_DENS_VAL,A_ESCU_VAL,A_COME_VAL,A_DEHA_VAL,T_CEPO_VAL,T_JERA_VAL,T_TRPU_VAL,T_BRT_VAL,T_METR_VAL) %>%
+    group_by(Cve_Segmen,ANIO,Is_Deaths) %>%
+    mutate(Counts = n()) %>% 
+    group_by(Cve_Segmen,ANIO) %>% 
+    mutate(I_BANQ = mean(I_BANQ_VAL),
+        I_ARBOL = mean(I_ARBOL_VA),
+        I_RAMP = mean(I_RAMP_VAL),
+        I_ALUM = mean(I_ALUM_VAL),
+        I_SENA = mean(I_SENA_VA),
+        A_DENS = mean(A_DENS_VAL),
+        A_ESCU = mean(A_ESCU_VAL),
+        A_COME = mean(A_COME_VAL),
+        A_DEHA = mean(A_DEHA_VAL),
+        T_CEPO = mean(T_CEPO_VAL),
+        T_JERA = mean(T_JERA_VAL),
+        T_TRPU = mean(T_TRPU_VAL),
+        T_BRT = mean(T_BRT_VAL),
+        T_METR = mean(T_METR_VAL)) %>% 
+    ungroup() %>% 
+    select(-c(I_BANQ_VAL,I_ARBOL_VA,I_RAMP_VAL,I_ALUM_VAL,I_SENA_VA,A_DENS_VAL,A_ESCU_VAL,A_COME_VAL,A_DEHA_VAL,T_CEPO_VAL,T_JERA_VAL,T_TRPU_VAL,T_BRT_VAL,T_METR_VAL)) %>% 
+    distinct() %>%
+    spread(key=Is_Deaths, value = Counts, fill = 0)
+
+accidentes_death <- accidentes_death %>% mutate('Rate of deaths' = Involved/(Involved+`Not involved`))
+accidentes_death <- accidentes_death %>% mutate('Invol' = if_else(Involved > 0, 1, 0))
+```
+
+```{r, echo=FALSE}
+ss <- accidentes_death$ANIO == 2019
+model_death <- glm(formula = Involved ~ I_BANQ+I_ARBOL+I_RAMP+I_ALUM+I_SENA+A_DENS+A_ESCU+A_COME+A_DEHA+T_CEPO+T_JERA+T_TRPU, data = accidentes_death, subset = ss, family = poisson)
+summary(model_death)
+
+model_death <- glm(formula = Involved ~ I_SENA+A_DEHA+T_JERA, data = accidentes_death, subset = ss, family = poisson)
+summary(model_death)
+
+```
 
 
 ```{r, echo=FALSE}
